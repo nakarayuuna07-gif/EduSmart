@@ -1,0 +1,32 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+@theme {
+  --color-primary: #2563EB;
+  --color-primary-dark: #1D4ED8;
+  --color-primary-light: #DBEAFE;
+  --color-surface-alt: #EFF6FF;
+  --color-navy: #0F172A;
+  --color-ink: #1E293B;
+  --color-ink-muted: #64748B;
+  --color-border-soft: #E2E8F0;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    background-color: #FFFFFF;
+    color: #1E293B;
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}

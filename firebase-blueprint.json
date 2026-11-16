@@ -1,0 +1,209 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Profil pengguna EduSmart AI beserta jenjang pendidikan default, saldo kredit, dan status langganan.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 254
+        },
+        "defaultLevel": {
+          "type": "string",
+          "enum": ["SMP", "SMA/SMK", "Mahasiswa"]
+        },
+        "credits": {
+          "type": "integer",
+          "description": "Saldo kredit tersisa milik akun."
+        },
+        "plan": {
+          "type": "string",
+          "enum": ["gratis", "unlimited"]
+        },
+        "planExpiresAt": {
+          "type": "integer",
+          "description": "Timestamp epoch milidetik masa aktif langganan unlimited (0 jika gratis)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "name",
+        "email",
+        "defaultLevel",
+        "credits",
+        "plan",
+        "planExpiresAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ChatSession": {
+      "title": "ChatSession",
+      "description": "Riwayat percakapan AI Tutor per pengguna.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "level": {
+          "type": "string",
+          "enum": ["SMP", "SMA/SMK", "Mahasiswa"]
+        },
+        "subject": {
+          "type": "string",
+          "enum": [
+            "Umum",
+            "Matematika",
+            "Fisika",
+            "Kimia",
+            "Biologi",
+            "Ekonomi",
+            "Bahasa Indonesia",
+            "Bahasa Inggris",
+            "Informatika",
+            "Lainnya"
+          ]
+        },
+        "messages": {
+          "type": "array",
+          "description": "Daftar pesan percakapan (maksimal 100 pesan)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "title", "level", "subject", "messages", "createdAt", "updatedAt"]
+    },
+    "SummaryRecord": {
+      "title": "SummaryRecord",
+      "description": "Hasil rangkuman materi per pengguna.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "level": {
+          "type": "string",
+          "enum": ["SMP", "SMA/SMK", "Mahasiswa"]
+        },
+        "inputLength": {
+          "type": "integer"
+        },
+        "sourcePreview": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "result": {
+          "type": "object",
+          "description": "Struktur rangkuman berisi judul, intiPembahasan, poinPenting, dan kesimpulan."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "level", "inputLength", "sourcePreview", "result", "createdAt"]
+    },
+    "QuizResultRecord": {
+      "title": "QuizResultRecord",
+      "description": "Hasil evaluasi kuis AI per pengguna.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "topic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        },
+        "level": {
+          "type": "string",
+          "enum": ["SMP", "SMA/SMK", "Mahasiswa"]
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["Mudah", "Sedang", "Sulit"]
+        },
+        "score": {
+          "type": "integer"
+        },
+        "correctCount": {
+          "type": "integer"
+        },
+        "totalQuestions": {
+          "type": "integer"
+        },
+        "items": {
+          "type": "array",
+          "description": "Detail evaluasi per soal termasuk jawaban pengguna, jawaban benar, dan pembahasan."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "topic", "level", "difficulty", "score", "correctCount", "totalQuestions", "items", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}/profile/main": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Dokumen profil privat milik pengguna termasuk saldo kredit dan langganan."
+    },
+    "/users/{uid}/chats/{chatId}": {
+      "schema": { "$ref": "#/entities/ChatSession" },
+      "description": "Koleksi sesi percakapan AI Tutor per pengguna."
+    },
+    "/users/{uid}/summaries/{summaryId}": {
+      "schema": { "$ref": "#/entities/SummaryRecord" },
+      "description": "Koleksi rangkuman materi per pengguna."
+    },
+    "/users/{uid}/quizResults/{quizId}": {
+      "schema": { "$ref": "#/entities/QuizResultRecord" },
+      "description": "Koleksi hasil evaluasi kuis AI per pengguna."
+    }
+  }
+}

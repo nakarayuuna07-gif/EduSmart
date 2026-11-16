@@ -1,0 +1,181 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: Default deny all reads and writes
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidLevel(level) {
+      return level in ['SMP', 'SMA/SMK', 'Mahasiswa'];
+    }
+
+    function isValidPlan(plan) {
+      return plan in ['gratis', 'unlimited'];
+    }
+
+    function isValidSubject(subject) {
+      return subject in [
+        'Umum',
+        'Matematika',
+        'Fisika',
+        'Kimia',
+        'Biologi',
+        'Ekonomi',
+        'Bahasa Indonesia',
+        'Bahasa Inggris',
+        'Informatika',
+        'Lainnya'
+      ];
+    }
+
+    function isValidDifficulty(diff) {
+      return diff in ['Mudah', 'Sedang', 'Sulit'];
+    }
+
+    function isValidProfile(data, uid) {
+      return data.keys().hasAll(['uid', 'name', 'email', 'defaultLevel', 'credits', 'plan', 'planExpiresAt', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'name', 'email', 'defaultLevel', 'credits', 'plan', 'planExpiresAt', 'createdAt', 'updatedAt'])
+        && data.uid is string && data.uid == uid && isValidId(data.uid)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && isValidLevel(data.defaultLevel)
+        && data.credits is int && data.credits >= 0 && data.credits <= 1000000
+        && isValidPlan(data.plan)
+        && data.planExpiresAt is int && data.planExpiresAt >= 0
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidChat(data, uid) {
+      return data.keys().hasAll(['uid', 'title', 'level', 'subject', 'messages', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'title', 'level', 'subject', 'messages', 'createdAt', 'updatedAt'])
+        && data.uid is string && data.uid == uid && isValidId(data.uid)
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
+        && isValidLevel(data.level)
+        && isValidSubject(data.subject)
+        && data.messages is list && data.messages.size() >= 1 && data.messages.size() <= 100
+        && data.messages[0] is map
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSummary(data, uid) {
+      return data.keys().hasAll(['uid', 'level', 'inputLength', 'sourcePreview', 'result', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'level', 'inputLength', 'sourcePreview', 'result', 'createdAt'])
+        && data.uid is string && data.uid == uid && isValidId(data.uid)
+        && data.level is string && isValidLevel(data.level)
+        && data.inputLength is int && data.inputLength >= 100 && data.inputLength <= 12000
+        && data.sourcePreview is string && data.sourcePreview.size() >= 1 && data.sourcePreview.size() <= 300
+        && data.result is map
+        && data.result.keys().hasAll(['judul', 'intiPembahasan', 'poinPenting', 'kesimpulan'])
+        && data.result.keys().hasOnly(['judul', 'intiPembahasan', 'poinPenting', 'kesimpulan'])
+        && data.result.judul is string && data.result.judul.size() >= 1 && data.result.judul.size() <= 300
+        && data.result.intiPembahasan is string && data.result.intiPembahasan.size() >= 1 && data.result.intiPembahasan.size() <= 4000
+        && data.result.poinPenting is list && data.result.poinPenting.size() >= 1 && data.result.poinPenting.size() <= 25
+        && data.result.poinPenting[0] is string
+        && data.result.kesimpulan is string && data.result.kesimpulan.size() >= 1 && data.result.kesimpulan.size() <= 2500
+        && data.createdAt is timestamp;
+    }
+
+    function isValidQuizResult(data, uid) {
+      return data.keys().hasAll(['uid', 'topic', 'level', 'difficulty', 'score', 'correctCount', 'totalQuestions', 'items', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'topic', 'level', 'difficulty', 'score', 'correctCount', 'totalQuestions', 'items', 'createdAt'])
+        && data.uid is string && data.uid == uid && isValidId(data.uid)
+        && data.topic is string && data.topic.size() >= 1 && data.topic.size() <= 5000
+        && isValidLevel(data.level)
+        && isValidDifficulty(data.difficulty)
+        && data.score is int && data.score >= 0 && data.score <= 100
+        && data.correctCount is int && data.correctCount >= 0 && data.correctCount <= 10
+        && data.totalQuestions is int && data.totalQuestions >= 1 && data.totalQuestions <= 10
+        && data.items is list && data.items.size() >= 1 && data.items.size() <= 10
+        && data.items[0] is map
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{uid} {
+      allow read, write: if false;
+
+      match /profile/{profileId} {
+        allow get: if isOwner(uid) && profileId == 'main';
+        allow list: if false;
+        allow create: if isOwner(uid)
+          && profileId == 'main'
+          && isValidProfile(incoming(), uid)
+          && incoming().credits == 100
+          && incoming().plan == 'gratis'
+          && incoming().planExpiresAt == 0
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isOwner(uid)
+          && profileId == 'main'
+          && isValidProfile(incoming(), uid)
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'defaultLevel', 'credits', 'plan', 'planExpiresAt', 'updatedAt']);
+        allow delete: if false;
+      }
+
+      match /chats/{chatId} {
+        allow get: if isOwner(uid) && isValidId(chatId);
+        allow list: if isOwner(uid) && existing().uid == request.auth.uid;
+        allow create: if isOwner(uid)
+          && isValidId(chatId)
+          && isValidChat(incoming(), uid)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isOwner(uid)
+          && isValidId(chatId)
+          && isValidChat(incoming(), uid)
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'level', 'subject', 'messages', 'updatedAt']);
+        allow delete: if isOwner(uid) && isValidId(chatId);
+      }
+
+      match /summaries/{summaryId} {
+        allow get: if isOwner(uid) && isValidId(summaryId);
+        allow list: if isOwner(uid) && existing().uid == request.auth.uid;
+        allow create: if isOwner(uid)
+          && isValidId(summaryId)
+          && isValidSummary(incoming(), uid)
+          && incoming().createdAt == request.time;
+        allow update: if false;
+        allow delete: if isOwner(uid) && isValidId(summaryId);
+      }
+
+      match /quizResults/{quizId} {
+        allow get: if isOwner(uid) && isValidId(quizId);
+        allow list: if isOwner(uid) && existing().uid == request.auth.uid;
+        allow create: if isOwner(uid)
+          && isValidId(quizId)
+          && isValidQuizResult(incoming(), uid)
+          && incoming().createdAt == request.time;
+        allow update: if false;
+        allow delete: if isOwner(uid) && isValidId(quizId);
+      }
+    }
+  }
+}
